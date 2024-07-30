@@ -17,13 +17,13 @@ num_population = 30
 num_parent = num_population-2
 num_child = int(num_parent/2)
 num_tournament = 3
-percentage_mutation = 0.3
+percentage_mutation = 0.9
 population = []
 tardiness_list = []
 min_depth = 1
 max_depth = 5
 mutation_minimum, mutation_maximum = 1, 3
-terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer']
+terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer', 'slack', 'is_there_resource_setup']
 function_node_list = ['+', '-', '*', 'neg', 'is_positive']
 
 
