@@ -125,7 +125,7 @@ if __name__ == "__main__":
         best_individual_index = np.argmin(tardiness_list)
         best_individual = population[best_individual_index]
         for rule_type in rules:
-            total_dict[rule_type].appebd(sim.run_the_simulator(problem, best_individual if rule_type=='GP' else rule_type))
+            total_dict[rule_type].append(sim.run_the_simulator(problem, best_individual if rule_type=='GP' else rule_type))
 
 
     for rule_type in rules:
