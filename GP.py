@@ -5,24 +5,25 @@ import random
 
 import simulator as sim
 import tree_class as tc
+import data_generate as dg
 
 import sys
 sys.setrecursionlimit(10**7)
 
-base_path = './data_train/5x100x6/5x100x6_%d.pickle'
+base_path = './data_train/3x12x6/3x12x6_%d.pickle'
 
 num_iteration = 5
-num_population = 50
-num_parent = 48
-num_child = 24
-num_tournament = 1
+num_population = 30
+num_parent = num_population-2
+num_child = int(num_parent/2)
+num_tournament = 3
 percentage_mutation = 0.3
 population = []
 tardiness_list = []
 min_depth = 1
-max_depth = 4
+max_depth = 5
 mutation_minimum, mutation_maximum = 1, 3
-terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer', 'is_there_resource_setup']
+terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer']
 function_node_list = ['+', '-', '*', 'neg', 'is_positive']
 
 
@@ -82,7 +83,7 @@ if __name__ == "__main__":
 
 
 
-    problem_path = './data_train/5x100x6/5x100x6_77.pickle'
+    problem_path = './data_train/3x12x6/3x12x6_77.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     tardiness_list = []
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     best_individual = population[best_individual_index]
     tc.print_tree(best_individual)
     """
-    problem_path = './data_train/5x100x6/5x100x6_77.pickle'
+    problem_path = './data_train/3x12x6/3x12x6.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     """
@@ -125,7 +126,7 @@ if __name__ == "__main__":
         best_individual_index = np.argmin(tardiness_list)
         best_individual = population[best_individual_index]
         for rule_type in rules:
-            total_dict[rule_type].appebd(sim.run_the_simulator(problem, best_individual if rule_type=='GP' else rule_type))
+            total_dict[rule_type].append(sim.run_the_simulator(problem, best_individual if rule_type=='GP' else rule_type))
 
 
     for rule_type in rules:

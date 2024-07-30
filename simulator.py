@@ -44,7 +44,7 @@ class Simulator:
         self.num_machine = dataset['n_m'] # machine 개수
         self.setup_time = 50
         self.total_tardiness = 0
-        self.num_resource = 15
+        self.num_resource = 0
         self.resource_setup_time = 5
         self.transfer_time = []
 
@@ -75,7 +75,7 @@ class Simulator:
           for j in range(self.num_machine):
               processing_time_for_load_data[i].append(dataset['machine_processing_times'][j][i])
         # 룰 적용할때는 machine 당이 편할거 같아서 data generate 부분은 유지
-
+        self.num_resource = dataset['num_resource_type']
         job_info = {i:Job(i, processing_time_for_load_data[i], dataset['due_dates'][i], dataset['eligible_machines'][i], dataset['ready_times'][i], dataset['family_group'][i], dataset['required_resource'][i]) for i in range(self.num_job) }
         machine_info = {j:Machine(j) for j in range(self.num_machine) }
         resource_info = {k:Resource(k, random.randint(0, self.num_machine-1)) for k in range(self.num_resource) }
@@ -325,9 +325,10 @@ def get_action(env, jobs, machines, method):
                 value_dict = dict()
                 value_dict['machine_available_time'] = i.available_time
                 value_dict['job_prts_at_machine'] = j.prts[i.id]
-                value_dict['job_due'] = -j.due
+                value_dict['job_due'] = j.due
                 value_dict['is_there_setup'] = env.if_setup(j, i)
                 value_dict['is_there_transfer'] = env.if_transfer(env.resource_info[j.required_resource], i)
+                value_dict['slack'] = j.due-j.prts[i.id]
                 value_dict['is_there_resource_setup'] = env.if_resource_setup(j, i)
                 if tc.translate_to_priority(method, value_dict) > maximum_priority:
                   job_index = j.id

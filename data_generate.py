@@ -54,18 +54,21 @@ def generate_data_dict(env_params):
             machine_processing_times[machine_index].append(random.randint(env_params['low'], env_params['high']))
 
     # ready time (= 이전 코드의 release time)
-    ready_times = [random.randint(0, 100) for _ in range(env_params['n_j'])]
-
+    #ready_times = [random.randint(0, 100) for _ in range(env_params['n_j'])]
+    min_prts = [min(row[i] for row in machine_processing_times) for i in range(env_params['n_j'])]
+    average_prts = np.mean(min_prts)
+    ready_times = [random.randint(0, int(average_prts)) for _ in range(env_params['n_j'])]
     # due date
-    due_dates = [random.randint(env_params['due_low'], env_params['due_high']) for _ in range(env_params['n_j'])]
-
+    #due_dates = [random.randint(env_params['due_low'], env_params['due_high']) for _ in range(env_params['n_j'])]
+    due_dates = [random.randint(int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']-env_params['R']/2)), int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']+env_params['R']/2))) for i in range(env_params['n_j']) ] 
+    
     # family
     group = [[] for _ in range(env_params['num_families'])]
     for job_index in range(env_params['n_j']):
         family = random.choice(range(env_params['num_families']))
         group[family].append(job_index)
     family_group = {job: i for i, family in enumerate(group) for job in family}
-
+    
     # job requiring resource
     required_resource = [random.randint(0, env_params['num_resource_type']-1) for _ in range(env_params['n_j'])]
 
@@ -99,8 +102,8 @@ def generate_data_dict(env_params):
 if __name__ == '__main__':
     # parameters
     env_params = {
-        'n_j': 100,
-        'n_m': 5,
+        'n_j': 12,
+        'n_m': 3,
         'low': 10,
         'high': 30,
         'due_low': 5,
@@ -108,7 +111,9 @@ if __name__ == '__main__':
         'num_families': 6,
         'num_resource_type': 15,
         'min_transfer': 20,
-        'max_transfer': 30
+        'max_transfer': 30,
+        'T' : 0.2,
+        'R': 0.2
     }
 
     base_dir = './'  # 로컬 디렉토리 설정
@@ -123,5 +128,3 @@ with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
 """
-
-
