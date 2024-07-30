@@ -22,7 +22,7 @@ tardiness_list = []
 min_depth = 1
 max_depth = 4
 mutation_minimum, mutation_maximum = 1, 3
-terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer']
+terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer', 'is_there_resource_setup']
 function_node_list = ['+', '-', '*', 'neg', 'is_positive']
 
 
@@ -98,24 +98,7 @@ if __name__ == "__main__":
     """
 
 
-
-    print('GP')
-    sim.run_the_simulator_last(problem, best_individual) # last는 스케쥴까지 출력 + tardiness 출력
-    print('SPT')
-    sim.run_the_simulator_last(problem, 'SPT')
-    print('EDD')
-    sim.run_the_simulator_last(problem, 'EDD')
-    print('LPT')
-    sim.run_the_simulator_last(problem, 'LPT')
-    print('FIFO')
-    sim.run_the_simulator_last(problem, 'FIFO')
-    print('CR')
-    sim.run_the_simulator_last(problem, 'CR')
-    print('CO')
-    sim.run_the_simulator_last(problem, 'CO')
-    print('ATCS')
-    sim.run_the_simulator_last(problem, 'ATCS')
-
+    rules = ['GP', 'SPT', 'EDD', 'LPT', 'FIFO', "CR", 'CO', 'ATCS']
     total_dict = {
         'GP':[],
         'SPT':[],
@@ -126,6 +109,11 @@ if __name__ == "__main__":
         'CO':[],
         'ATCS':[]
     }
+
+    for rule_type in rules:
+        print(rule_type)
+        sim.run_the_simulator_last(problem, best_individual if rule_type=='GP' else rule_type)
+
     for iteration in range(30):
         iteration += 80
         problem_path = base_path % iteration
@@ -136,21 +124,11 @@ if __name__ == "__main__":
             tardiness_list.append(sim.run_the_simulator(problem, individual)) # total tardiness를 리턴하도록 변경
         best_individual_index = np.argmin(tardiness_list)
         best_individual = population[best_individual_index]
-        total_dict['GP'].append(sim.run_the_simulator(problem, best_individual))
-        total_dict['SPT'].append(sim.run_the_simulator(problem, 'SPT'))
-        total_dict['LPT'].append(sim.run_the_simulator(problem, 'LPT'))
-        total_dict['EDD'].append(sim.run_the_simulator(problem, 'EDD'))
-        total_dict['FIFO'].append(sim.run_the_simulator(problem, 'FIFO'))
-        total_dict['CR'].append(sim.run_the_simulator(problem, 'CR'))
-        total_dict['CO'].append(sim.run_the_simulator(problem, 'CO'))
-        total_dict['ATCS'].append(sim.run_the_simulator(problem, 'ATCS'))
+        for rule_type in rules:
+            total_dict[rule_type].appebd(sim.run_the_simulator(problem, best_individual if rule_type=='GP' else rule_type))
 
-    print('GP', np.mean(total_dict['GP']))
-    print('SPT', np.mean(total_dict['SPT']))
-    print('LPT', np.mean(total_dict['LPT']))
-    print('EDD', np.mean(total_dict['EDD']))
-    print('FIFO', np.mean(total_dict['FIFO']))
-    print('CR', np.mean(total_dict['CR']))
-    print('CO', np.mean(total_dict['CO']))
-    print('ATCS', np.mean(total_dict['ATCS']))
+
+    for rule_type in rules:
+        print(rule_type, np.mean(total_dict[rule_type]))
+
 

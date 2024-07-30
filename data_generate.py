@@ -6,6 +6,20 @@ import numpy as np
 from pathlib import Path
 
 # 데이터 생성 함수 정의
+
+def generate_symmetric_matrix(size, min_value, max_value):
+    # Initialize a size x size matrix with zeros
+    matrix = [[0] * size for _ in range(size)]
+
+    # Fill in the upper triangle and mirror it to the lower triangle
+    for i in range(size):
+        for j in range(i, size):
+            value = random.randint(min_value, max_value)  # Generate a random integer (e.g., between 0 and 10)
+            matrix[i][j] = value
+            matrix[j][i] = value
+
+    return matrix
+
 def make_train_data_dict(env_params, num_prob, base_dir):
     current_path = Path(os.getcwd())
     params = copy.deepcopy(env_params)
@@ -58,6 +72,8 @@ def generate_data_dict(env_params):
     # eligible machine set
     eligible_machines = [random.sample(range(env_params['n_m']), 3) for _ in range(env_params['n_j'])]
 
+    transfer_time = generate_symmetric_matrix(env_params['n_m'], env_params['min_transfer'], env_params['max_transfer'])
+
     random_generate_data = {
         'machine_processing_times': machine_processing_times,
         'ready_times': ready_times,
@@ -65,6 +81,7 @@ def generate_data_dict(env_params):
         'family_group': family_group,
         'eligible_machines': eligible_machines,
         'required_resource': required_resource,
+        'transfer_time': transfer_time,
         'n_j': env_params['n_j'],
         'n_m': env_params['n_m'],
         'low': env_params['low'],
@@ -72,7 +89,9 @@ def generate_data_dict(env_params):
         'due_low': env_params['due_low'],
         'due_high': env_params['due_high'],
         'num_families': env_params['num_families'],
-        'num_resource_type': env_params['num_resource_type']
+        'num_resource_type': env_params['num_resource_type'],
+        'min_transfer': env_params['min_transfer'],
+        'max_transfer': env_params['max_transfer']
     }
     return random_generate_data
 
@@ -82,12 +101,14 @@ if __name__ == '__main__':
     env_params = {
         'n_j': 100,
         'n_m': 5,
-        'low': 5,
-        'high': 50,
+        'low': 10,
+        'high': 30,
         'due_low': 5,
         'due_high': 100,
         'num_families': 6,
-        'num_resource_type': 15
+        'num_resource_type': 15,
+        'min_transfer': 20,
+        'max_transfer': 30
     }
 
     base_dir = './'  # 로컬 디렉토리 설정
@@ -102,3 +123,5 @@ with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
 """
+
+

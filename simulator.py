@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import tree_class as tc
 
+
 class Job():
     def __init__(self, job_id, prts=0, due=0, machines=None, ready_time=0, job_family=[], required_resource=0):
         # static info
@@ -43,8 +44,9 @@ class Simulator:
         self.num_machine = dataset['n_m'] # machine 개수
         self.setup_time = 50
         self.total_tardiness = 0
-        self.transfer_time = 50
         self.num_resource = 15
+        self.resource_setup_time = 5
+        self.transfer_time = []
 
         # static info
         self.machine_info = dict()
@@ -77,7 +79,7 @@ class Simulator:
         job_info = {i:Job(i, processing_time_for_load_data[i], dataset['due_dates'][i], dataset['eligible_machines'][i], dataset['ready_times'][i], dataset['family_group'][i], dataset['required_resource'][i]) for i in range(self.num_job) }
         machine_info = {j:Machine(j) for j in range(self.num_machine) }
         resource_info = {k:Resource(k, random.randint(0, self.num_machine-1)) for k in range(self.num_resource) }
-
+        self.transfer_time = dataset['transfer_time']
         return job_info, machine_info, resource_info
 
     def reset(self):
@@ -128,14 +130,18 @@ class Simulator:
             self.schedule[machine.id].append((Job('s'), self.sim_time, self.sim_time + setup_time))
         transfer_time = self.if_transfer(resource, machine)
         if transfer_time > 0:
+            resource.location = machine.id
             self.schedule[machine.id].append((Job('t'), self.sim_time + setup_time, self.sim_time + setup_time + transfer_time))
-        job.now_remain_t = job.prts[machine.id] + setup_time + transfer_time
-        machine.available_time += job.prts[machine.id] + setup_time + transfer_time # 이거 sim_time이 맞지않나??
-        resource.available_time += job.prts[machine.id] + setup_time + transfer_time
+        resource_setup_time = self.if_resource_setup(job, machine)
+        if resource_setup_time > 0:
+            self.schedule[machine.id].append((Job('rs'), self.sim_time + setup_time + transfer_time, self.sim_time + setup_time + transfer_time + resource_setup_time))
+        job.now_remain_t = job.prts[machine.id] + setup_time + transfer_time + resource_setup_time
+        machine.available_time += job.prts[machine.id] + setup_time + transfer_time + resource_setup_time
+        resource.available_time += job.prts[machine.id] + setup_time + transfer_time + resource_setup_time
         tardiness = 0 if machine.available_time - job.due <= 0 else machine.available_time - job.due
         self.total_tardiness += tardiness
         #machine.resource -= job.required_resource
-        self.schedule[machine.id].append((job, self.sim_time + setup_time + transfer_time, machine.available_time))
+        self.schedule[machine.id].append((job, self.sim_time + setup_time + transfer_time + resource_setup_time, machine.available_time))
         #print(self.sim_time)
         #print(job.id)
         #print(machine.id)
@@ -201,9 +207,15 @@ class Simulator:
         if resource.location == machine.id:
             return 0
         else:
-            resource.location = machine.id
-            return self.transfer_time
+            transfer_time = self.transfer_time[resource.location][machine.id]
+            return transfer_time
 
+    def if_resource_setup(self, job, machine):
+        if len(self.schedule[machine.id])==0 or self.schedule[machine.id][-1][0].required_resource == job.required_resource:
+          return 0
+        else:
+          return self.resource_setup_time
+        
 def get_action(env, jobs, machines, method):
     """
     action selection
@@ -316,6 +328,7 @@ def get_action(env, jobs, machines, method):
                 value_dict['job_due'] = -j.due
                 value_dict['is_there_setup'] = env.if_setup(j, i)
                 value_dict['is_there_transfer'] = env.if_transfer(env.resource_info[j.required_resource], i)
+                value_dict['is_there_resource_setup'] = env.if_resource_setup(j, i)
                 if tc.translate_to_priority(method, value_dict) > maximum_priority:
                   job_index = j.id
                   machine_index = i.id
