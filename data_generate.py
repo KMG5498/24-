@@ -108,7 +108,7 @@ if __name__ == '__main__':
         'high': 30,
         'due_low': 5,
         'due_high': 100,
-        'num_families': 6,
+        'num_families': 3,
         'num_resource_type': 15,
         'min_transfer': 20,
         'max_transfer': 30,
@@ -120,11 +120,10 @@ if __name__ == '__main__':
 
     make_train_data_dict(env_params, num_prob=200, base_dir=base_dir)
 
-"""
+
 # 데이터 불러오기 예시
-problem_path = './data_train/5x100x6/5x100x6_77.pickle'
+problem_path = './data_train/3x12x3/3x12x3_77.pickle'
 
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
-"""

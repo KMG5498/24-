@@ -10,7 +10,7 @@ import data_generate as dg
 import sys
 sys.setrecursionlimit(10**7)
 
-base_path = './data_train/3x12x6/3x12x6_%d.pickle'
+base_path = './data_train/3x12x3/3x12x3_%d.pickle'
 
 num_iteration = 5
 num_population = 30
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
 
 
-    problem_path = './data_train/3x12x6/3x12x6_77.pickle'
+    problem_path = './data_train/3x12x3/3x12x3_77.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     tardiness_list = []
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     best_individual = population[best_individual_index]
     tc.print_tree(best_individual)
     """
-    problem_path = './data_train/3x12x6/3x12x6.pickle'
+    problem_path = './data_train/3x12x3/3x12x3.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     """
