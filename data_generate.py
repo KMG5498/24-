@@ -48,20 +48,33 @@ def make_eval_data_dict(env_params, num_prob, base_dir):
 
 def generate_data_dict(env_params):
     # machine-job 당 process time
+    distribution_choice = random.choice(['uniform', 'gaussian', 'quasi-bimodal'])
     machine_processing_times = [[] for _ in range(env_params['n_m'])]
     for job_index in range(env_params['n_j']):
         for machine_index in range(env_params['n_m']):
-            machine_processing_times[machine_index].append(random.randint(env_params['low'], env_params['high']))
+            if distribution_choice == 'uniform':
+                value = random.randint(0, 100)
+            elif distribution_choice == 'gaussian':
+                value = max(0, min(100, int(random.gauss(50, 15))))
+            elif distribution_choice == 'quasi-bimodal':
+                value = random.choice([random.randint(0, 50), random.randint(51, 100)])
+            machine_processing_times[machine_index].append(value)
 
+    job_weights = [random.uniform(0, 1) for _ in range(env_params['n_j'])]
     # ready time (= 이전 코드의 release time)
     #ready_times = [random.randint(0, 100) for _ in range(env_params['n_j'])]
-    min_prts = [min(row[i] for row in machine_processing_times) for i in range(env_params['n_j'])]
-    average_prts = np.mean(min_prts)
-    ready_times = [random.randint(0, int(average_prts)) for _ in range(env_params['n_j'])]
+    
+    # p_hat 계산 후 ready time
+    total_processing_time = sum(sum(times) for times in machine_processing_times)
+    p_hat = total_processing_time / (env_params['n_m'] ** 2)
+    ready_times = [random.randint(0, int(p_hat / 2)) for _ in range(env_params['n_j'])]
+    #min_prts = [min(row[i] for row in machine_processing_times) for i in range(env_params['n_j'])]
+    #average_prts = np.mean(min_prts)
     # due date
     #due_dates = [random.randint(env_params['due_low'], env_params['due_high']) for _ in range(env_params['n_j'])]
-    due_dates = [random.randint(int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']-env_params['R']/2)), int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']+env_params['R']/2))) for i in range(env_params['n_j']) ] 
-    
+    due_dates = [random.randint(int(ready_times[i] + (p_hat - ready_times[i]) * (1 - env_params['T'] - env_params['R'] / 2)),
+                                int(ready_times[i] + (p_hat - ready_times[i]) * (1 - env_params['T'] + env_params['R'] / 2))) for i in range(env_params['n_j'])]
+
     # family
     group = [[] for _ in range(env_params['num_families'])]
     for job_index in range(env_params['n_j']):
@@ -79,6 +92,7 @@ def generate_data_dict(env_params):
 
     random_generate_data = {
         'machine_processing_times': machine_processing_times,
+        'job_weights': job_weights,
         'ready_times': ready_times,
         'due_dates': due_dates,
         'family_group': family_group,
@@ -106,8 +120,6 @@ if __name__ == '__main__':
         'n_m': 3,
         'low': 10,
         'high': 30,
-        'due_low': 5,
-        'due_high': 100,
         'num_families': 3,
         'num_resource_type': 15,
         'min_transfer': 20,
