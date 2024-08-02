@@ -10,7 +10,7 @@ import data_generate as dg
 import sys
 sys.setrecursionlimit(10**7)
 
-base_path = './data_train/3x12x3/3x12x3_%d.pickle'
+base_path = './data_train/3x12x5/3x12x5_%d.pickle'
 
 num_iteration = 5
 num_population = 30
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
 
 
-    problem_path = './data_train/3x12x3/3x12x3_77.pickle'
+    problem_path = './data_train/3x12x5/3x12x5_77.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     tardiness_list = []
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         problem = pickle.load(fr)
     """
 
-
+    """
     rules = ['GP', 'SPT', 'EDD', 'LPT', 'FIFO', "CR", 'CO', 'ATCS']
     total_dict = {
         'GP':[],
@@ -109,6 +109,12 @@ if __name__ == "__main__":
         'CR':[],
         'CO':[],
         'ATCS':[]
+    }
+    """
+    rules = ['GP', 'SPT']
+    total_dict = {
+        'GP':[],
+        'SPT':[]
     }
 
     for rule_type in rules:
