@@ -12,7 +12,7 @@ sys.setrecursionlimit(10**7)
 
 base_path = './data_train/3x12x5/3x12x5_%d.pickle'
 
-num_iteration = 5
+num_iteration = 10
 num_population = 30
 num_parent = num_population-2
 num_child = int(num_parent/2)
