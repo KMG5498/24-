@@ -11,7 +11,7 @@ import tree_class as tc
 
 class Job():
     def __init__(self, job_id, dataset):
-        if dataset != None:
+        if dataset:
             self.id = job_id
             self.due = dataset['due_dates'][job_id]
             self.ready_time = dataset['ready_times'][job_id]
@@ -31,16 +31,10 @@ class Job():
 
 
     def is_done(self):
-        for op in self.operations:
-            if op.state == 'not done' or op.state == 'doing':
-                return False
-        return True
+        return all(op.state == 'done' for op in self.operations)
     
     def is_doing(self):
-        for op in self.operations:
-            if op.state == 'doing':
-                return True
-        return False
+        return any(op.state == 'doing' for op in self.operations)
     
     def next_op(self):
         for op in self.operations:
@@ -116,44 +110,33 @@ class Simulator:
     def load_data(self, dataset):
         # 룰 적용할때는 machine 당이 편할거 같아서 data generate 부분은 유지
         job_info = {i:Job(i, dataset) for i in range(self.num_job)}
-        machine_info = {j:Machine(j) for j in range(self.num_machine) }
-        resource_info = {k:Resource(k, random.randint(0, self.num_machine-1)) for k in range(self.num_resource) }
+        machine_info = {j:Machine(j) for j in range(self.num_machine)}
+        resource_info = {k:Resource(k, random.randint(0, self.num_machine-1)) for k in range(self.num_resource)}
         return job_info, machine_info, resource_info
 
     def reset(self):
         self.sim_time = 0
-        for_reset = []
-        for i in range(self.num_job):
-          if self.job_info[i].ready_time == 0:
-            for_reset.append(i)
-        self.available_job_list = for_reset
+        self.available_job_list = [i for i in range(self.num_job) if self.job_info[i].ready_time == 0]
         # ready time 0인 job들만 저장
 
     def get_available_job(self, available_machines):
         for_available_job = []
-        op = None
-        for job in list(self.job_info.values()):
+        for job in self.job_info.values():
             if job.ready_time <= self.sim_time and not job.is_done() and not job.is_doing():
                 op = job.next_op()
-                k=0
-                for ma in available_machines:
-                    if ma.id in op.eligible_machine:
-                        k+=1
-                if k > 0:
-                    if op.id == 'Photo':
-                        if self.resource_info[job.required_resource].available_time <= self.sim_time:
-                            for_available_job.append(job)
-                    else:
+                if any(ma.id in op.eligible_machine for ma in available_machines):
+                    if op.id == 'Photo' and self.resource_info[job.required_resource].available_time <= self.sim_time:
+                        for_available_job.append(job)
+                    elif op.id != 'Photo':
                         for_available_job.append(job)
         self.available_job_list = for_available_job
         return self.available_job_list
 
 
     def get_next_time_step(self):
-        next_job_time = min([job.operations[job.now].now_remain_t for job in self.job_info.values() if job.now_op() != None and job.operations[job.now].now_remain_t > 0])
-        next_machine_time = min([machine.available_time for machine in self.machine_info.values() if machine.available_time >= self.sim_time])
-        next_machine_time -= self.sim_time
-        return min(next_job_time, next_machine_time)
+        next_job_times = [job.operations[job.now].now_remain_t for job in self.job_info.values() if job.now_op() and job.operations[job.now].now_remain_t > 0]
+        next_machine_times = [machine.available_time - self.sim_time for machine in self.machine_info.values() if machine.available_time >= self.sim_time]
+        return min(min(next_job_times, default=float('inf')), min(next_machine_times, default=float('inf')))
 
 
     def step(self, action):
@@ -197,26 +180,25 @@ class Simulator:
 
     def move_to_next_sim_t(self, passid):
         if passid == 0:
-          time_diff = self.get_next_time_step()
+            time_diff = self.get_next_time_step()
         else:
-          time_diff = 1
-          for machine_index in range(self.num_machine):
-              if self.machine_info[machine_index].available_time == self.sim_time:
-                  self.machine_info[machine_index].available_time += 1
-          for resource_index in range(self.num_resource):
-              if self.resource_info[resource_index].available_time == self.sim_time:
-                  self.resource_info[resource_index].available_time += 1
+            time_diff = 1
+            for machine in self.machine_info.values():
+                if machine.available_time == self.sim_time:
+                    machine.available_time += 1
+            for resource in self.resource_info.values():
+                if resource.available_time == self.sim_time:
+                    resource.available_time += 1
         self.sim_time += time_diff
-        for job in list(self.job_info.values()):
-            if job.now_op() != None:
-                if job.operations[job.now].now_remain_t > 0:
-                    job.operations[job.now].now_remain_t -= time_diff # job remaining time 업데이트
-                    if job.operations[job.now].now_remain_t == 0:
-                        job.operations[job.now].state = 'done'
-                        if job.is_done():
-                            self.completed_job_list.append(job) # 완료된 job 업데이트
-                            if self.sim_time > job.due:
-                                self.total_tardiness += self.sim_time - job.due
+        for job in self.job_info.values():
+            if job.now_op() and job.operations[job.now].now_remain_t > 0:
+                job.operations[job.now].now_remain_t -= time_diff
+                if job.operations[job.now].now_remain_t == 0:
+                    job.operations[job.now].state = 'done'
+                    if job.is_done():
+                        self.completed_job_list.append(job)
+                        if self.sim_time > job.due:
+                            self.total_tardiness += self.sim_time - job.due
 
 
     def is_done(self):
@@ -234,12 +216,10 @@ class Simulator:
         """
         # Parent별 색상을 지정하기 위한 색상 사전
         parent_colors = {}
-        # 'tab20' 팔레트를 사용하여 알아보기 쉬운 색상 생성
-        palette = sns.color_palette("turbo", self.num_job + 5)  # 충분히 많은 색상 생성
-        random.shuffle(palette)  # 색상 배열을 랜덤으로 섞어 색상 중복을 최소화
+        palette = sns.color_palette("turbo", self.num_job + 5)
+        random.shuffle(palette)
 
-        # 그래프 크기 조정 (가로로 넓게, 세로로 짧게)
-        fig, ax = plt.subplots(figsize=(15, 6))  # 세로 크기를 좀 더 크게 조정
+        fig, ax = plt.subplots(figsize=(15, 6))
 
         color_index = 0
 
@@ -247,28 +227,23 @@ class Simulator:
             for job in jobs:
                 job_id, start_time, end_time = job
 
-                # 부모가 빈 문자열("")인 경우 색상을 하얀색으로 설정
                 if job_id.parent == "":
                     color = 'white'
                 else:
-                    # 부모가 색상 사전에 없으면 색상 추가
                     if job_id.parent not in parent_colors:
                         parent_colors[job_id.parent] = palette[color_index]
                         color_index += 1
                     color = parent_colors[job_id.parent]
 
-                # Job을 바 형식으로 그리기
                 ax.barh(machine_id, end_time - start_time, left=start_time, color=color,
                         edgecolor='black', align='center', alpha=0.8)
-
-                # 텍스트를 바의 중앙에 위치시키고 겹치지 않도록 조정
+                
                 ax.text(start_time + (end_time - start_time) / 2, machine_id,
                         f'{job_id.id + str(job_id.parent)}', color='black', ha='center', va='center', fontsize=8)
 
-        # Parent가 같은 Job들을 선으로 연결
         for parent in parent_colors:
             parent_jobs = [(machine_id, job) for machine_id, jobs in self.schedule.items() for job in jobs if job[0].parent == parent]
-            parent_jobs.sort(key=lambda x: x[1][1])  # 시작 시간 기준으로 정렬
+            parent_jobs.sort(key=lambda x: x[1][1]) 
 
             for i in range(len(parent_jobs) - 1):
                 (machine_id1, job1), (machine_id2, job2) = parent_jobs[i], parent_jobs[i + 1]
@@ -342,86 +317,99 @@ def get_action(env, jobs, machines, method):
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+    
     elif method == "FIFO":
-        job_index=0
-        machine_index=0
-        minimum_ready_time=math.inf
-        for j in jobs:
-          if j.ready_time < minimum_ready_time:
-              job_index = j.id
-              machine_index = random.choice(list(set(j.machines)&set([machine.id for machine in machines])))
-              minimum_ready_time = j.ready_time
+        job_index = 0
+        machine_index = 0
+        minimum_ready_time = math.inf
+        for jb in jobs:
+            if jb.ready_time < minimum_ready_time:
+                job_index = jb.id
+                next_op = jb.next_op()
+                machine_index = random.choice([ma.id for ma in machines if ma.id in next_op.eligible_machine])
+                minimum_ready_time = jb.ready_time
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+
     elif method == 'EDD':
-        job_index=0
-        machine_index=0
-        minimum_due_time=math.inf
-        for j in jobs:
-          if j.due < minimum_due_time:
-              job_index = j.id
-              machine_index = random.choice(list(set(j.machines)&set([machine.id for machine in machines])))
-              minimum_due_time = j.due
+        job_index = 0
+        machine_index = 0
+        minimum_due_time = math.inf
+        for jb in jobs:
+            if jb.due < minimum_due_time:
+                job_index = jb.id
+                next_op = jb.next_op()
+                machine_index = random.choice([ma.id for ma in machines if ma.id in next_op.eligible_machine])
+                minimum_due_time = jb.due
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+
     elif method == 'LPT':
-        job_index=0
-        machine_index=0
-        maximum_prts=-math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and j.prts[i.id] > maximum_prts:
-                job_index = j.id
-                machine_index = i.id
-                maximum_prts = j.prts[i.id]
+        job_index = 0
+        machine_index = 0
+        maximum_prts = -math.inf
+        for ma in machines:
+            for jb in jobs:
+                next_op = jb.next_op()
+                for eli_ma in next_op.eligible_machine:
+                    if eli_ma == ma.id and next_op.prts[ma.id] > maximum_prts:
+                        job_index = jb.id
+                        machine_index = ma.id
+                        maximum_prts = next_op.prts[ma.id]
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+        
     elif method == 'CR':
-        job_index=0
-        machine_index=0
-        maximum_cr=-math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and j.prts[i.id]/j.due > maximum_cr:
-                job_index = j.id
-                machine_index = i.id
-                maximum_cr = j.prts[i.id]
+        job_index = 0
+        machine_index = 0
+        maximum_cr = -math.inf
+        for ma in machines:
+            for jb in jobs:
+                next_op = jb.next_op()
+                cr = (jb.due - env.sim_time) / next_op.prts[ma.id] if next_op.prts[ma.id] != 0 else -math.inf
+                if cr > maximum_cr and ma.id in next_op.eligible_machine:
+                    job_index = jb.id
+                    machine_index = ma.id
+                    maximum_cr = cr
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+
     elif method == 'CO':
-        job_index=0
-        machine_index=0
-        minimum_co=math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and j.prts[i.id]*j.due < minimum_co:
-                job_index = j.id
-                machine_index = i.id
-                minimum_co = j.prts[i.id]
+        job_index = 0
+        machine_index = 0
+        minimum_co = math.inf
+        for ma in machines:
+            for jb in jobs:
+                next_op = jb.next_op()
+                co = next_op.prts[ma.id] * (jb.due - env.sim_time)
+                if co < minimum_co and ma.id in next_op.eligible_machine:
+                    job_index = jb.id
+                    machine_index = ma.id
+                    minimum_co = co
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+
     elif method == 'ATCS':
-        job_index=0
-        machine_index=0
-        maximum_prts=-math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and ((-j.due+j.prts[i.id]-env.if_setup(j,i))*2+4*(-env.if_transfer(env.resource_info[j.required_resource], i)))/j.prts[i.id] > maximum_prts:
-                job_index = j.id
-                machine_index = i.id
-                maximum_prts = j.prts[i.id]
+        job_index = 0
+        machine_index = 0
+        maximum_priority = -math.inf
+        for ma in machines:
+            for jb in jobs:
+                next_op = jb.next_op()
+                priority = ((-jb.due + next_op.prts[ma.id] - env.if_setup(jb, ma)) * 2 + 4 * (-env.if_transfer(env.resource_info[jb.required_resource], ma))) / next_op.prts[ma.id]
+                if priority > maximum_priority and ma.id in next_op.eligible_machine:
+                    job_index = jb.id
+                    machine_index = ma.id
+                    maximum_priority = priority
         selected_job = env.job_info[job_index]
         selected_machine = env.machine_info[machine_index]
         selected_machine.processing_job = selected_job
+
     else:
         job_index = 0
         machine_index = 0
