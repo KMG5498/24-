@@ -214,7 +214,6 @@ class Simulator:
         """
         Gantt Chart를 출력하는 함수
         """
-        # Parent별 색상을 지정하기 위한 색상 사전
         parent_colors = {}
         palette = sns.color_palette("turbo", self.num_job + 5)
         random.shuffle(palette)
@@ -237,7 +236,7 @@ class Simulator:
 
                 ax.barh(machine_id, end_time - start_time, left=start_time, color=color,
                         edgecolor='black', align='center', alpha=0.8)
-                
+
                 ax.text(start_time + (end_time - start_time) / 2, machine_id,
                         f'{job_id.id + str(job_id.parent)}', color='black', ha='center', va='center', fontsize=8)
 
@@ -250,16 +249,13 @@ class Simulator:
                 job_id1, start_time1, end_time1 = job1
                 job_id2, start_time2, end_time2 = job2
 
-                # job_id가 문자열이 아닌 경우에만 선 그리기
                 if isinstance(job_id1.parent, int) and isinstance(job_id2.parent, int) and job_id1.order + 1 == job_id2.order and machine_id1 != machine_id2:
-                    # 선 그리기
                     ax.plot([end_time1, start_time2], [machine_id1, machine_id2], color=parent_colors[parent], linestyle='-', linewidth=1)
 
         ax.set_xlabel('Time')
         ax.set_ylabel('Machine')
         ax.set_title('Schedule')
 
-        # Y축을 반대로 설정 (위에서 아래로 머신 순서)
         ax.invert_yaxis()
 
         plt.show()
