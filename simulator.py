@@ -232,14 +232,11 @@ class Simulator:
         """
         Gantt Chart를 출력하는 함수
         """
-        # Parent별 색상을 지정하기 위한 색상 사전
         parent_colors = {}
-        # 'tab20' 팔레트를 사용하여 알아보기 쉬운 색상 생성
-        palette = sns.color_palette("turbo", self.num_job + 5)  # 충분히 많은 색상 생성
-        random.shuffle(palette)  # 색상 배열을 랜덤으로 섞어 색상 중복을 최소화
+        palette = sns.color_palette("turbo", self.num_job + 5) 
+        random.shuffle(palette)
 
-        # 그래프 크기 조정 (가로로 넓게, 세로로 짧게)
-        fig, ax = plt.subplots(figsize=(15, 6))  # 세로 크기를 좀 더 크게 조정
+        fig, ax = plt.subplots(figsize=(15, 6))
 
         color_index = 0
 
@@ -247,44 +244,36 @@ class Simulator:
             for job in jobs:
                 job_id, start_time, end_time = job
 
-                # 부모가 빈 문자열("")인 경우 색상을 하얀색으로 설정
                 if job_id.parent == "":
                     color = 'white'
                 else:
-                    # 부모가 색상 사전에 없으면 색상 추가
                     if job_id.parent not in parent_colors:
                         parent_colors[job_id.parent] = palette[color_index]
                         color_index += 1
                     color = parent_colors[job_id.parent]
 
-                # Job을 바 형식으로 그리기
                 ax.barh(machine_id, end_time - start_time, left=start_time, color=color,
                         edgecolor='black', align='center', alpha=0.8)
 
-                # 텍스트를 바의 중앙에 위치시키고 겹치지 않도록 조정
                 ax.text(start_time + (end_time - start_time) / 2, machine_id,
                         f'{job_id.id + str(job_id.parent)}', color='black', ha='center', va='center', fontsize=8)
 
-        # Parent가 같은 Job들을 선으로 연결
         for parent in parent_colors:
             parent_jobs = [(machine_id, job) for machine_id, jobs in self.schedule.items() for job in jobs if job[0].parent == parent]
-            parent_jobs.sort(key=lambda x: x[1][1])  # 시작 시간 기준으로 정렬
+            parent_jobs.sort(key=lambda x: x[1][1]) 
 
             for i in range(len(parent_jobs) - 1):
                 (machine_id1, job1), (machine_id2, job2) = parent_jobs[i], parent_jobs[i + 1]
                 job_id1, start_time1, end_time1 = job1
                 job_id2, start_time2, end_time2 = job2
 
-                # job_id가 문자열이 아닌 경우에만 선 그리기
                 if isinstance(job_id1.parent, int) and isinstance(job_id2.parent, int) and job_id1.order + 1 == job_id2.order and machine_id1 != machine_id2:
-                    # 선 그리기
                     ax.plot([end_time1, start_time2], [machine_id1, machine_id2], color=parent_colors[parent], linestyle='-', linewidth=1)
 
         ax.set_xlabel('Time')
         ax.set_ylabel('Machine')
         ax.set_title('Schedule')
 
-        # Y축을 반대로 설정 (위에서 아래로 머신 순서)
         ax.invert_yaxis()
 
         plt.show()

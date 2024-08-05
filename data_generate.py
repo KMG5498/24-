@@ -50,7 +50,6 @@ def make_eval_data_dict(env_params, num_prob, base_dir):
             pickle.dump(problems_dict, f, pickle.HIGHEST_PROTOCOL)
 
 def generate_data_dict(env_params):
-<<<<<<< HEAD
     #job 종류 생성
     job_type = [[] for _ in range(env_params['num_families'])]
     for i in range(env_params['num_families']):
@@ -84,45 +83,6 @@ def generate_data_dict(env_params):
     # due date 생성
     due_dates = [random.randint(int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']-env_params['R']/2)), int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']+env_params['R']/2))) for i in range(env_params['n_j']) ] 
     
-    """
-=======
-    # machine-job 당 process time
-    distribution_choice = random.choice(['uniform', 'gaussian', 'quasi-bimodal'])
-    machine_processing_times = [[] for _ in range(env_params['n_m'])]
-    for job_index in range(env_params['n_j']):
-        for machine_index in range(env_params['n_m']):
-            if distribution_choice == 'uniform':
-                value = random.randint(0, 100)
-            elif distribution_choice == 'gaussian':
-                value = max(0, min(100, int(random.gauss(50, 15))))
-            elif distribution_choice == 'quasi-bimodal':
-                value = random.choice([random.randint(0, 50), random.randint(51, 100)])
-            machine_processing_times[machine_index].append(value)
-
-    job_weights = [random.uniform(0, 1) for _ in range(env_params['n_j'])]
-    # ready time (= 이전 코드의 release time)
-    #ready_times = [random.randint(0, 100) for _ in range(env_params['n_j'])]
-    
-    # p_hat 계산 후 ready time
-    total_processing_time = sum(sum(times) for times in machine_processing_times)
-    p_hat = total_processing_time / (env_params['n_m'] ** 2)
-    ready_times = [random.randint(0, int(p_hat / 2)) for _ in range(env_params['n_j'])]
-    #min_prts = [min(row[i] for row in machine_processing_times) for i in range(env_params['n_j'])]
-    #average_prts = np.mean(min_prts)
-    # due date
-    #due_dates = [random.randint(env_params['due_low'], env_params['due_high']) for _ in range(env_params['n_j'])]
-    due_dates = [random.randint(int(ready_times[i] + (p_hat - ready_times[i]) * (1 - env_params['T'] - env_params['R'] / 2)),
-                                int(ready_times[i] + (p_hat - ready_times[i]) * (1 - env_params['T'] + env_params['R'] / 2))) for i in range(env_params['n_j'])]
-
->>>>>>> 7f6a8c47228a8ab98d7ca77e91e01472a4293a61
-    # family
-    group = [[] for _ in range(env_params['num_families'])]
-    for job_index in range(env_params['n_j']):
-        family = random.choice(range(env_params['num_families']))
-        group[family].append(job_index)
-    family_group = {job: i for i, family in enumerate(group) for job in family}
-    
-    """
     # job requiring resource
     required_resource = [random.randint(0, env_params['num_resource_type']-1) for _ in range(env_params['num_families'])]
 
@@ -152,7 +112,6 @@ def generate_data_dict(env_params):
         'job_type': job_type,
         'job_type_list': job_type_list,
         'machine_processing_times': machine_processing_times,
-        'job_weights': job_weights,
         'ready_times': ready_times,
         'due_dates': due_dates,
         'eligible_machines': eligible_machines,
@@ -179,13 +138,8 @@ if __name__ == '__main__':
         'n_m': 3,
         'low': 10,
         'high': 30,
-<<<<<<< HEAD
         'num_families': 5,
         'num_resource_type': 5,
-=======
-        'num_families': 3,
-        'num_resource_type': 15,
->>>>>>> 7f6a8c47228a8ab98d7ca77e91e01472a4293a61
         'min_transfer': 20,
         'max_transfer': 30,
         'T' : 0.2,
