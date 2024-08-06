@@ -108,7 +108,11 @@ if __name__ == "__main__":
         problem = pickle.load(fr)
     """
 
+<<<<<<< HEAD
     """
+=======
+
+>>>>>>> 9d06223ea5c9e90ad019f2c2c948074b01e71c7d
     rules = ['GP', 'SPT', 'EDD', 'LPT', 'FIFO', "CR", 'CO', 'ATCS', 'CUSTOM']
     total_dict = {
         'GP':[],
@@ -126,6 +130,8 @@ if __name__ == "__main__":
     total_dict = {
         'GP':[]
     }
+    """
+
 
 
 
