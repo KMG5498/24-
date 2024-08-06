@@ -11,7 +11,7 @@ import tree_class as tc
 
 class Job():
     def __init__(self, job_id, dataset):
-        if dataset:
+        if dataset != None:
             self.id = job_id
             self.due = dataset['due_dates'][job_id]
             self.ready_time = dataset['ready_times'][job_id]
@@ -31,16 +31,28 @@ class Job():
 
 
     def is_done(self):
-        return all(op.state == 'done' for op in self.operations)
+        for op in self.operations:
+            if op.state == 'not done' or op.state == 'doing':
+                return False
+        return True
     
     def is_doing(self):
-        return any(op.state == 'doing' for op in self.operations)
+        for op in self.operations:
+            if op.state == 'doing':
+                return True
+        return False
     
     def next_op(self):
-        return next((op for op in self.operations if op.state == 'not done'), None)
+        for op in self.operations:
+            if op.state == 'not done':
+                return op
+        return None
     
     def now_op(self):
-        return next((op for op in self.operations if op.state == 'doing'), None)
+        for op in self.operations:
+            if op.state == 'doing':
+                return op
+        return None
     
             
 
@@ -104,31 +116,44 @@ class Simulator:
     def load_data(self, dataset):
         # 룰 적용할때는 machine 당이 편할거 같아서 data generate 부분은 유지
         job_info = {i:Job(i, dataset) for i in range(self.num_job)}
-        machine_info = {j:Machine(j) for j in range(self.num_machine)}
-        resource_info = {k:Resource(k, random.randint(0, self.num_machine-1)) for k in range(self.num_resource)}
+        machine_info = {j:Machine(j) for j in range(self.num_machine) }
+        resource_info = {k:Resource(k, random.randint(0, self.num_machine-1)) for k in range(self.num_resource) }
         return job_info, machine_info, resource_info
 
     def reset(self):
         self.sim_time = 0
-        self.available_job_list = [i for i in range(self.num_job) if self.job_info[i].ready_time == 0]
+        for_reset = []
+        for i in range(self.num_job):
+          if self.job_info[i].ready_time == 0:
+            for_reset.append(i)
+        self.available_job_list = for_reset
         # ready time 0인 job들만 저장
 
     def get_available_job(self, available_machines):
-        available_jobs = [
-            job for job in self.job_info.values()
-            if job.ready_time <= self.sim_time and not job.is_done() and not job.is_doing()
-            and any(ma.id in job.next_op().eligible_machine for ma in available_machines)
-            and (job.next_op().id != 'Photo' or self.resource_info[job.required_resource].available_time <= self.sim_time)
-        ]
-        self.available_job_list = available_jobs
+        for_available_job = []
+        op = None
+        for job in list(self.job_info.values()):
+            if job.ready_time <= self.sim_time and not job.is_done() and not job.is_doing():
+                op = job.next_op()
+                k=0
+                for ma in available_machines:
+                    if ma.id in op.eligible_machine:
+                        k+=1
+                if k > 0:
+                    if op.id == 'Photo':
+                        if self.resource_info[job.required_resource].available_time <= self.sim_time:
+                            for_available_job.append(job)
+                    else:
+                        for_available_job.append(job)
+        self.available_job_list = for_available_job
         return self.available_job_list
 
 
-
     def get_next_time_step(self):
-        next_job_times = [job.operations[job.now].now_remain_t for job in self.job_info.values() if job.now_op() and job.operations[job.now].now_remain_t > 0]
-        next_machine_times = [machine.available_time - self.sim_time for machine in self.machine_info.values() if machine.available_time >= self.sim_time]
-        return min(min(next_job_times, default=float('inf')), min(next_machine_times, default=float('inf')))
+        next_job_time = min([job.operations[job.now].now_remain_t for job in self.job_info.values() if job.now_op() != None and job.operations[job.now].now_remain_t > 0])
+        next_machine_time = min([machine.available_time for machine in self.machine_info.values() if machine.available_time >= self.sim_time])
+        next_machine_time -= self.sim_time
+        return min(next_job_time, next_machine_time)
 
 
     def step(self, action):
@@ -172,25 +197,26 @@ class Simulator:
 
     def move_to_next_sim_t(self, passid):
         if passid == 0:
-            time_diff = self.get_next_time_step()
+          time_diff = self.get_next_time_step()
         else:
-            time_diff = 1
-            for machine in self.machine_info.values():
-                if machine.available_time == self.sim_time:
-                    machine.available_time += 1
-            for resource in self.resource_info.values():
-                if resource.available_time == self.sim_time:
-                    resource.available_time += 1
+          time_diff = 1
+          for machine_index in range(self.num_machine):
+              if self.machine_info[machine_index].available_time == self.sim_time:
+                  self.machine_info[machine_index].available_time += 1
+          for resource_index in range(self.num_resource):
+              if self.resource_info[resource_index].available_time == self.sim_time:
+                  self.resource_info[resource_index].available_time += 1
         self.sim_time += time_diff
-        for job in self.job_info.values():
-            if job.now_op() and job.operations[job.now].now_remain_t > 0:
-                job.operations[job.now].now_remain_t -= time_diff
-                if job.operations[job.now].now_remain_t == 0:
-                    job.operations[job.now].state = 'done'
-                    if job.is_done():
-                        self.completed_job_list.append(job)
-                        if self.sim_time > job.due:
-                            self.total_tardiness += self.sim_time - job.due
+        for job in list(self.job_info.values()):
+            if job.now_op() != None:
+                if job.operations[job.now].now_remain_t > 0:
+                    job.operations[job.now].now_remain_t -= time_diff # job remaining time 업데이트
+                    if job.operations[job.now].now_remain_t == 0:
+                        job.operations[job.now].state = 'done'
+                        if job.is_done():
+                            self.completed_job_list.append(job) # 완료된 job 업데이트
+                            if self.sim_time > job.due:
+                                self.total_tardiness += self.sim_time - job.due
 
 
     def is_done(self):
@@ -207,7 +233,7 @@ class Simulator:
         Gantt Chart를 출력하는 함수
         """
         parent_colors = {}
-        palette = sns.color_palette("turbo", self.num_job + 5)
+        palette = sns.color_palette("turbo", self.num_job + 5) 
         random.shuffle(palette)
 
         fig, ax = plt.subplots(figsize=(15, 6))
@@ -301,12 +327,10 @@ def get_action(env, jobs, machines, method):
         return apply_co_rule(env, jobs, machines)
     elif method == 'ATCS': 
         return apply_atcs_rule(env, jobs, machines)
-    elif method == 'GP': 
-        return apply_gp(env, jobs, machines)
     elif method == 'CUSTOM': 
         return apply_custom_rule(env, jobs, machines)
     else:
-        raise ValueError(f"Unknown method: {method}")
+        return apply_gp(env, jobs, machines, method)
 
 def apply_spt_rule(env, jobs, machines):
     job_index = 0
@@ -423,7 +447,7 @@ def apply_atcs_rule(env, jobs, machines):
     selected_machine.processing_job = selected_job
     return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
 
-def apply_gp(env, jobs, machines):
+def apply_gp(env, jobs, machines, method):
     job_index = 0
     machine_index = 0
     maximum_priority = -math.inf
@@ -440,7 +464,7 @@ def apply_gp(env, jobs, machines):
                     value_dict['is_there_transfer'] = env.if_transfer(env.resource_info[jb.required_resource], ma)
                     value_dict['slack'] = jb.due - next_op.prts[ma.id]
                     value_dict['is_there_resource_setup'] = env.if_resource_setup(jb, ma)
-                    priority = tc.translate_to_priority('GP', value_dict)  # GP 규칙을 사용하여 우선순위를 계산합니다.
+                    priority = tc.translate_to_priority(method, value_dict) 
                     if priority > maximum_priority:
                         job_index = jb.id
                         machine_index = ma.id
@@ -449,16 +473,6 @@ def apply_gp(env, jobs, machines):
     selected_machine = env.machine_info[machine_index]
     selected_machine.processing_job = selected_job
     return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
-
-def is_unbalanced(machines):
-    loads = [machine.available_time for machine in machines]
-    return max(loads) - min(loads) > (sum(loads) / len(loads)) * 0.2
-
-def apply_custom_rule(env, jobs, machines):
-    if is_unbalanced(machines):
-        return apply_spt_rule(env, jobs, machines)
-    else:
-        return apply_edd_rule(env, jobs, machines)
 
 def run_the_simulator_last(problem, rule):
     data = problem
@@ -499,11 +513,24 @@ def run_the_simulator(problem, rule):
           sim.move_to_next_sim_t(1)
     return sim.total_tardiness
 
+def is_unbalanced(machines):
+    loads = [machine.available_time for machine in machines]
+    return max(loads) - min(loads) > (sum(loads) / len(loads)) * 0.2
 
+def apply_custom_rule(env, jobs, machines):
+    if is_unbalanced(machines):
+        return apply_spt_rule(env, jobs, machines)
+    else:
+        return apply_edd_rule(env, jobs, machines)
+
+
+"""
 problem_path = './data_train/3x12x5/3x12x5_77.pickle'
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
 
-run_the_simulator_last(problem, 'CUSTOM')
+run_the_simulator_last(problem, 'SPT')
 #run_the_simulator(problem, 'SPT')
+"""
+
