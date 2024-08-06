@@ -72,35 +72,38 @@ def generate_data_dict(env_params):
     for fa_type in range(env_params['num_families']):
         for op in for_prts_op:
             for _ in range (env_params['n_m']):
-                machine_processing_times[fa_type][op].append(random.randint(env_params['low'], env_params['high']))
-                for_mean.append(machine_processing_times[fa_type][op][-1])
+                if op == 'Photo':
+                    machine_processing_times[fa_type][op].append(random.randint(env_params['photo_low'], env_params['photo_high']))
+                    for_mean.append(machine_processing_times[fa_type][op][-1])
+                else:
+                    machine_processing_times[fa_type][op].append(random.randint(env_params['prts_low'], env_params['prts_high']))
+                    for_mean.append(machine_processing_times[fa_type][op][-1])               
 
     #ready time 생성
     average_prts = np.mean(for_mean)
-    
     ready_times = [random.randint(0, int(average_prts/2)) for _ in range(env_params['n_j'])]
     #ready_times = [0 for _ in range(env_params['n_j'])]
     # due date 생성
-    due_dates = [random.randint(int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']-env_params['R']/2)), int(ready_times[i]+(average_prts-ready_times[i])*(1-env_params['T']+env_params['R']/2))) for i in range(env_params['n_j']) ] 
+
+    due_dates = [random.randint(int(ready_times[i]+(average_prts*len(job_type[job_type_list[i]])-ready_times[i])*(1-env_params['T']-env_params['R']/2)), int(ready_times[i]+(average_prts*len(job_type[job_type_list[i]])-ready_times[i])*(1-env_params['T']+env_params['R']/2))) for i in range(env_params['n_j']) ] 
     
     # job requiring resource
     required_resource = [random.randint(0, env_params['num_resource_type']-1) for _ in range(env_params['num_families'])]
 
-    # eligible machine set
+    # eligible machine set # machine 3등분 해서 A, B, Photo에 할당
     eligible_machines = [{i:[] for i in for_prts_op} for _ in range(env_params['num_families'])]
     for fa_type in range(env_params['num_families']):
         for op in for_prts_op:
-            for _ in range (env_params['n_m']):
-                eligible_machines[fa_type][op] = random.sample(range(env_params['n_m']), 2)
+            if op == 'A':
+                eligible_machines[fa_type][op] = random.sample(range(int(env_params['n_m']/3)), 2)
+            elif op  == 'B':
+                eligible_machines[fa_type][op] = random.sample(range(int(env_params['n_m']/3), int(env_params['n_m']/3*2)), 2)
+            else:
+                eligible_machines[fa_type][op] = random.sample(range(int(env_params['n_m']/3*2), env_params['n_m']), 2)
 
 
-    # operation이 바뀔 때
-    operation_change_time = {op: {opp: random.randint(env_params['etc_min'], env_params['etc_max']) for opp in for_prts_op} for op in for_prts_op}
-    operation_change_time['A']['A'] = 0
-    operation_change_time['B']['B'] = 0
-    operation_change_time['Photo']['Photo'] = 0
     # job이 다른 머신으로 이동할 때
-    job_transfer_time = generate_symmetric_matrix(env_params['n_m'], env_params['etc_min'], env_params['etc_max'])
+    job_transfer_time = generate_symmetric_matrix(env_params['n_m'], env_params['min_transfer'], env_params['max_transfer'])
 
     # job type이 바뀔 때
     job_change_time = generate_symmetric_matrix(env_params['num_families'], 0, env_params['max_setup'])
@@ -118,7 +121,6 @@ def generate_data_dict(env_params):
         'required_resource': required_resource,
         'transfer_time': transfer_time,
         'job_change_time' : job_change_time,
-        'operation_change_time': operation_change_time,
         'job_transfer_time': job_transfer_time,
         'n_j': env_params['n_j'],
         'n_m': env_params['n_m'],
@@ -135,13 +137,15 @@ if __name__ == '__main__':
     # parameters
     env_params = {
         'n_j': 12,
-        'n_m': 3,
-        'low': 10,
-        'high': 30,
+        'n_m': 9,
+        'prts_low': 10,
+        'prts_high': 30,
+        'photo_low':50,
+        'photo_high':100,
         'num_families': 5,
         'num_resource_type': 5,
         'min_transfer': 20,
-        'max_transfer': 30,
+        'max_transfer': 50,
         'T' : 0.2,
         'R': 0.2,
         'operation_type' : ['A', 'B'],
@@ -149,20 +153,18 @@ if __name__ == '__main__':
         'max_job_length': 5,
         'min_job_length': 2,
         'num_operation': 3,
-        'max_setup': 5,
-        'etc_min': 3,
-        'etc_max': 7
+        'max_setup': 5
     }
 
     base_dir = './'  # 로컬 디렉토리 설정
 
     make_train_data_dict(env_params, num_prob=200, base_dir=base_dir)
 
-"""
+
 # 데이터 불러오기 예시
-problem_path = './data_train/3x12x5/3x12x5_77.pickle'
+problem_path = './data_train/9x12x5/9x12x5_77.pickle'
 
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
-"""
+

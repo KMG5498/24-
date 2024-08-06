@@ -32,7 +32,7 @@ class Job():
 
     def is_done(self):
         for op in self.operations:
-            if op.state == 'not done' or op.state == 'doing':
+            if op.state != 'done':
                 return False
         return True
     
@@ -93,7 +93,6 @@ class Simulator:
         self.resource_setup_time = 5
         self.transfer_time = dataset['transfer_time']
         self.job_change_time = dataset['job_change_time']
-        self.operation_change_time = dataset['operation_change_time']
         self.job_transfer_time = dataset['job_transfer_time']
 
         # static info
@@ -163,7 +162,6 @@ class Simulator:
         transfer_time = self.if_transfer(resource, machine)
         resource_setup_time = self.if_resource_setup(job, machine)
         job_transfer_time = self.if_job_transfer(job, machine)
-        operation_change_time = self.if_operation_change(job, machine)
         now_time = self.sim_time
         if job_transfer_time>0:
             self.schedule[machine.id].append((Job('jt', None), now_time, now_time + job_transfer_time))
@@ -171,14 +169,11 @@ class Simulator:
         if setup_time > 0:
             self.schedule[machine.id].append((Job('s', None), now_time, now_time + setup_time))
         now_time += setup_time
-        if operation_change_time > 0:
-            self.schedule[machine.id].append((Job('oc', None), now_time, now_time + operation_change_time))
-        now_time += operation_change_time
 
         if next_operation.id == 'Photo':
             if transfer_time > 0:
                 resource.location = machine.id
-                self.schedule[machine.id].append((Job('t', None), now_time, now_time + transfer_time))
+                self.schedule[machine.id].append((Job('rt', None), now_time, now_time + transfer_time))
             now_time += transfer_time
             
             if resource_setup_time > 0:
@@ -191,7 +186,8 @@ class Simulator:
         job.next += 1
         job.last = machine.id
         machine.available_time += next_operation.prts[machine.id] + now_time - self.sim_time
-        resource.available_time += next_operation.prts[machine.id] + now_time - self.sim_time
+        if job.operations[job.now].id == 'Photo':
+            resource.available_time += next_operation.prts[machine.id] + now_time - self.sim_time
         self.schedule[machine.id].append((next_operation, now_time, machine.available_time))
 
 
@@ -305,12 +301,6 @@ class Simulator:
         else:
             return self.job_transfer_time[job.last][machine.id]
 
-    def if_operation_change(self, job, machine):
-        op = job.next_op()
-        if len(self.schedule[machine.id])==0 or self.schedule[machine.id][-1][0].id == op.id:
-           return 0
-        else:
-           return self.operation_change_time[self.schedule[machine.id][-1][0].id][op.id]
 
 def get_action(env, jobs, machines, method):
     if method == 'SPT': 
@@ -479,7 +469,7 @@ def run_the_simulator_last(problem, rule):
     sim = Simulator(data)
     sim.reset()
     while not sim.is_done():
-        available_machines = [machine for machine in sim.machine_info.values() if machine.available_time <= sim.sim_time] 
+        available_machines = [machine for machine in sim.machine_info.values() if machine.available_time <= sim.sim_time]
         available_jobs = sim.get_available_job(available_machines) 
         if available_jobs != []:
           action = get_action(sim, available_jobs, available_machines, rule)
@@ -525,7 +515,7 @@ def apply_custom_rule(env, jobs, machines):
 
 
 """
-problem_path = './data_train/3x12x5/3x12x5_77.pickle'
+problem_path = './data_train/9x12x5/9x12x5_77.pickle'
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
@@ -533,4 +523,9 @@ with open(problem_path, 'rb') as fr:
 run_the_simulator_last(problem, 'SPT')
 #run_the_simulator(problem, 'SPT')
 """
+
+
+
+
+
 

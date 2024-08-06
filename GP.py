@@ -3,6 +3,8 @@ import numpy as np
 import math
 import random
 import copy
+import matplotlib.pyplot as plt
+
 
 import simulator as sim
 import tree_class as tc
@@ -11,9 +13,9 @@ import data_generate as dg
 import sys
 sys.setrecursionlimit(10**7)
 
-base_path = './data_train/3x12x5/3x12x5_%d.pickle'
+base_path = './data_train/9x12x5/9x12x5_%d.pickle'
 
-num_iteration = 5
+num_iteration = 10
 num_population = 30
 num_parent = num_population-2
 num_child = int(num_parent/2)
@@ -31,6 +33,7 @@ function_node_list = ['+', '-', '*', 'neg', 'is_positive']
 if __name__ == "__main__":
     # 초기 population 생성
     population = tc.making_random_population(terminal_node_list, function_node_list, min_depth, max_depth, num_population)
+    for_graph = []
     # iteration 수 만큼 시뮬레이터 실행 + evolution
     for i in range(num_iteration):
         next_population = []
@@ -47,6 +50,7 @@ if __name__ == "__main__":
         # elitism
         first_elite = np.argmin(tardiness_list)
         first_elite_tardiness = tardiness_list[first_elite]
+        for_graph.append(first_elite_tardiness)
         tardiness_list[first_elite] = math.inf
         second_elite = np.argmin(tardiness_list)
         tardiness_list[first_elite] = first_elite_tardiness
@@ -69,20 +73,11 @@ if __name__ == "__main__":
             child2 = None
             first_parent = tc.copy_tree(selected_parent[random.randint(0, num_parent-1)], None)
             second_parent = tc.copy_tree(selected_parent[random.randint(0, num_parent-1)], None)
-            #print(first_parent==second_parent)
-            #tc.print_tree(first_parent)
-            #print("p1")
-            #tc.print_tree(second_parent)
-            #print("p2")
             if random.random() <= percentage_mutation:
               child1 = tc.mutation(first_parent, terminal_node_list, function_node_list, mutation_minimum, mutation_maximum)
               child2 = tc.mutation(second_parent, terminal_node_list, function_node_list, mutation_minimum, mutation_maximum)
             else:
               child1, child2 = tc.crossover(first_parent, second_parent)
-            #tc.print_tree(child1)
-            #print("c1")
-            #tc.print_tree(child2)
-            #print("c2")
             next_population.append(tc.copy_tree(child1, None))
             next_population.append(tc.copy_tree(child2, None))
 
@@ -91,28 +86,29 @@ if __name__ == "__main__":
 
 
 
-    problem_path = './data_train/3x12x5/3x12x5_77.pickle'
+    problem_path = './data_train/9x12x5/9x12x5_77.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     tardiness_list = []
     for individual in population:
-        tc.print_tree(individual)
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         tardiness_list.append(sim.run_the_simulator(problem, individual)) # total tardiness를 리턴하도록 변경
     best_individual_index = np.argmin(tardiness_list)
     best_individual = population[best_individual_index]
     tc.print_tree(best_individual)
+    for_graph.append(tardiness_list[best_individual_index])
+    plt.plot(for_graph, marker='o')  # 각 점을 'o' 마커로 표시하고 점들을 선으로 연결
+    plt.xlabel('Index')  # x축 라벨
+    plt.ylabel('Value')  # y축 라벨
+    plt.title('Line Graph of for_graph')  # 그래프 제목
+    plt.grid(True)  # 그리드 표시
+    plt.show()  # 그래프 표시
+
     """
     problem_path = './data_train/3x12x3/3x12x3.pickle'
     with open(problem_path, 'rb') as fr:
         problem = pickle.load(fr)
     """
 
-<<<<<<< HEAD
-    """
-=======
-
->>>>>>> 9d06223ea5c9e90ad019f2c2c948074b01e71c7d
     rules = ['GP', 'SPT', 'EDD', 'LPT', 'FIFO', "CR", 'CO', 'ATCS', 'CUSTOM']
     total_dict = {
         'GP':[],
@@ -139,7 +135,7 @@ if __name__ == "__main__":
         print(rule_type)
         sim.run_the_simulator_last(problem, best_individual if rule_type=='GP' else rule_type)
 
-    for iteration in range(30):
+    for iteration in range(50):
         iteration += 80
         problem_path = base_path % iteration
         with open(problem_path, 'rb') as fr:
