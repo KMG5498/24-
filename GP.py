@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import math
 import random
+import copy
 
 import simulator as sim
 import tree_class as tc
@@ -12,7 +13,7 @@ sys.setrecursionlimit(10**7)
 
 base_path = './data_train/3x12x5/3x12x5_%d.pickle'
 
-num_iteration = 10
+num_iteration = 5
 num_population = 30
 num_parent = num_population-2
 num_child = int(num_parent/2)
@@ -21,8 +22,8 @@ percentage_mutation = 0.9
 population = []
 tardiness_list = []
 min_depth = 1
-max_depth = 5
-mutation_minimum, mutation_maximum = 1, 3
+max_depth = 3
+mutation_minimum, mutation_maximum = 1, 2
 terminal_node_list = ['machine_available_time', 'job_prts_at_machine', 'job_due', 'is_there_setup', 'is_there_transfer', 'slack', 'is_there_resource_setup']
 function_node_list = ['+', '-', '*', 'neg', 'is_positive']
 
@@ -49,36 +50,43 @@ if __name__ == "__main__":
         tardiness_list[first_elite] = math.inf
         second_elite = np.argmin(tardiness_list)
         tardiness_list[first_elite] = first_elite_tardiness
-        next_population.append(tc.copy_tree(population[first_elite]))
-        next_population.append(tc.copy_tree(population[second_elite]))
+        next_population.append(tc.copy_tree(population[first_elite], None))
+        next_population.append(tc.copy_tree(population[second_elite], None))
 
         # parent selction with tournament k=7
         selected_parent = []
         parent_indices = []
         for _ in range(num_parent):
             tournament_candidates = random.sample(list(zip(population, tardiness_list)), num_tournament)
-            selected_parent.append(tc.copy_tree(min(tournament_candidates, key=lambda x: x[1])[0]))
+            selected_parent.append(tc.copy_tree(min(tournament_candidates, key=lambda x: x[1])[0], None))
 
 
         # mutation + crossover
-        first_parent = None
-        second_parent = None
         for klkl in range(num_child):
+            first_parent = None
+            second_parent = None
             child1 = None
             child2 = None
-            first_parent = selected_parent[random.randint(0, num_parent-1)]
-            second_parent = selected_parent[random.randint(0, num_parent-1)]
+            first_parent = tc.copy_tree(selected_parent[random.randint(0, num_parent-1)], None)
+            second_parent = tc.copy_tree(selected_parent[random.randint(0, num_parent-1)], None)
+            #print(first_parent==second_parent)
+            #tc.print_tree(first_parent)
+            #print("p1")
+            #tc.print_tree(second_parent)
+            #print("p2")
             if random.random() <= percentage_mutation:
               child1 = tc.mutation(first_parent, terminal_node_list, function_node_list, mutation_minimum, mutation_maximum)
               child2 = tc.mutation(second_parent, terminal_node_list, function_node_list, mutation_minimum, mutation_maximum)
             else:
               child1, child2 = tc.crossover(first_parent, second_parent)
+            #tc.print_tree(child1)
+            #print("c1")
+            #tc.print_tree(child2)
+            #print("c2")
+            next_population.append(tc.copy_tree(child1, None))
+            next_population.append(tc.copy_tree(child2, None))
 
-            next_population.append(child1)
-            next_population.append(child2)
-
-
-        population = next_population
+        population = copy.deepcopy(next_population)
 
 
 
@@ -88,6 +96,8 @@ if __name__ == "__main__":
         problem = pickle.load(fr)
     tardiness_list = []
     for individual in population:
+        tc.print_tree(individual)
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         tardiness_list.append(sim.run_the_simulator(problem, individual)) # total tardiness를 리턴하도록 변경
     best_individual_index = np.argmin(tardiness_list)
     best_individual = population[best_individual_index]
@@ -99,7 +109,7 @@ if __name__ == "__main__":
     """
 
     """
-    rules = ['GP', 'SPT', 'EDD', 'LPT', 'FIFO', "CR", 'CO', 'ATCS']
+    rules = ['GP', 'SPT', 'EDD', 'LPT', 'FIFO', "CR", 'CO', 'ATCS', 'CUSTOM']
     total_dict = {
         'GP':[],
         'SPT':[],
@@ -108,14 +118,16 @@ if __name__ == "__main__":
         'FIFO':[],
         'CR':[],
         'CO':[],
-        'ATCS':[]
+        'ATCS':[],
+        'CUSTOM':[]
     }
     """
-    rules = ['GP', 'SPT']
+    rules = ['GP']
     total_dict = {
-        'GP':[],
-        'SPT':[]
+        'GP':[]
     }
+
+
 
     for rule_type in rules:
         print(rule_type)
@@ -137,5 +149,6 @@ if __name__ == "__main__":
 
     for rule_type in rules:
         print(rule_type, np.mean(total_dict[rule_type]))
+
 
 

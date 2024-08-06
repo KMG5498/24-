@@ -313,130 +313,166 @@ class Simulator:
            return self.operation_change_time[self.schedule[machine.id][-1][0].id][op.id]
 
 def get_action(env, jobs, machines, method):
-    """
-    action selection
-    """
-    if method == 'SPT':  # shortest processing time
-        job_index=0
-        machine_index=0
-        minimum_prts=math.inf
-        for ma in machines:
-          for jb in jobs:
-            next_op = jb.next_op()
-            for eli_ma in next_op.eligible_machine:
-              if eli_ma==ma.id and next_op.prts[ma.id] < minimum_prts:
-                job_index = jb.id
-                machine_index = ma.id
-                minimum_prts = next_op.prts[ma.id]
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
-    elif method == "FIFO":
-        job_index=0
-        machine_index=0
-        minimum_ready_time=math.inf
-        for j in jobs:
-          if j.ready_time < minimum_ready_time:
-              job_index = j.id
-              machine_index = random.choice(list(set(j.machines)&set([machine.id for machine in machines])))
-              minimum_ready_time = j.ready_time
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
-    elif method == 'EDD':
-        job_index=0
-        machine_index=0
-        minimum_due_time=math.inf
-        for j in jobs:
-          if j.due < minimum_due_time:
-              job_index = j.id
-              machine_index = random.choice(list(set(j.machines)&set([machine.id for machine in machines])))
-              minimum_due_time = j.due
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
-    elif method == 'LPT':
-        job_index=0
-        machine_index=0
-        maximum_prts=-math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and j.prts[i.id] > maximum_prts:
-                job_index = j.id
-                machine_index = i.id
-                maximum_prts = j.prts[i.id]
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
-    elif method == 'CR':
-        job_index=0
-        machine_index=0
-        maximum_cr=-math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and j.prts[i.id]/j.due > maximum_cr:
-                job_index = j.id
-                machine_index = i.id
-                maximum_cr = j.prts[i.id]
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
-    elif method == 'CO':
-        job_index=0
-        machine_index=0
-        minimum_co=math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and j.prts[i.id]*j.due < minimum_co:
-                job_index = j.id
-                machine_index = i.id
-                minimum_co = j.prts[i.id]
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
-    elif method == 'ATCS':
-        job_index=0
-        machine_index=0
-        maximum_prts=-math.inf
-        for i in machines:
-          for j in jobs:
-            for jj in j.machines:
-              if jj==i.id and ((-j.due+j.prts[i.id]-env.if_setup(j,i))*2+4*(-env.if_transfer(env.resource_info[j.required_resource], i)))/j.prts[i.id] > maximum_prts:
-                job_index = j.id
-                machine_index = i.id
-                maximum_prts = j.prts[i.id]
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
+    if method == 'SPT': 
+        return apply_spt_rule(env, jobs, machines)
+    elif method == "FIFO":  
+        return apply_fifo_rule(env, jobs, machines)
+    elif method == 'EDD':  
+        return apply_edd_rule(env, jobs, machines)
+    elif method == 'LPT':  
+        return apply_lpt_rule(env, jobs, machines)
+    elif method == 'CR':  
+        return apply_cr_rule(env, jobs, machines)
+    elif method == 'CO':  
+        return apply_co_rule(env, jobs, machines)
+    elif method == 'ATCS': 
+        return apply_atcs_rule(env, jobs, machines)
+    elif method == 'CUSTOM': 
+        return apply_custom_rule(env, jobs, machines)
     else:
-        job_index = 0
-        machine_index = 0
-        maximum_priority = -math.inf
-        for ma in machines:
-          for jb in jobs:
+        return apply_gp(env, jobs, machines, method)
+
+def apply_spt_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    minimum_prts = math.inf
+    for ma in machines:
+        for jb in jobs:
             next_op = jb.next_op()
             for eli_ma in next_op.eligible_machine:
-              if eli_ma==ma.id:
-                value_dict = dict()
-                value_dict['machine_available_time'] = ma.available_time
-                value_dict['job_prts_at_machine'] = next_op.prts[ma.id]
-                value_dict['job_due'] = jb.due
-                value_dict['is_there_setup'] = env.if_setup(jb, ma)
-                value_dict['is_there_transfer'] = env.if_transfer(env.resource_info[jb.required_resource], ma)
-                value_dict['slack'] = jb.due-next_op.prts[ma.id]
-                value_dict['is_there_resource_setup'] = env.if_resource_setup(jb, ma)
-                if tc.translate_to_priority(method, value_dict) > maximum_priority:
-                  job_index = jb.id
-                  machine_index = ma.id
-                  maximum_priority = tc.translate_to_priority(method, value_dict)
-        selected_job = env.job_info[job_index]
-        selected_machine = env.machine_info[machine_index]
-        selected_machine.processing_job = selected_job
+                if eli_ma == ma.id and next_op.prts[ma.id] < minimum_prts:
+                    job_index = jb.id
+                    machine_index = ma.id
+                    minimum_prts = next_op.prts[ma.id]
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
     return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
 
+def apply_fifo_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    minimum_ready_time = math.inf
+    for jb in jobs:
+        if jb.ready_time < minimum_ready_time:
+            job_index = jb.id
+            next_op = jb.next_op()
+            machine_index = random.choice([ma.id for ma in machines if ma.id in next_op.eligible_machine])
+            minimum_ready_time = jb.ready_time
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
+
+def apply_edd_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    minimum_due_time = math.inf
+    for jb in jobs:
+        if jb.due < minimum_due_time:
+            job_index = jb.id
+            next_op = jb.next_op()
+            machine_index = random.choice([ma.id for ma in machines if ma.id in next_op.eligible_machine])
+            minimum_due_time = jb.due
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
+
+def apply_lpt_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    maximum_prts = -math.inf
+    for ma in machines:
+        for jb in jobs:
+            next_op = jb.next_op()
+            for eli_ma in next_op.eligible_machine:
+                if eli_ma == ma.id and next_op.prts[ma.id] > maximum_prts:
+                    job_index = jb.id
+                    machine_index = ma.id
+                    maximum_prts = next_op.prts[ma.id]
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
+
+def apply_cr_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    maximum_cr = -math.inf
+    for ma in machines:
+        for jb in jobs:
+            next_op = jb.next_op()
+            cr = (jb.due - env.sim_time) / next_op.prts[ma.id] if next_op.prts[ma.id] != 0 else -math.inf
+            if cr > maximum_cr and ma.id in next_op.eligible_machine:
+                job_index = jb.id
+                machine_index = ma.id
+                maximum_cr = cr
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
+
+def apply_co_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    minimum_co = math.inf
+    for ma in machines:
+        for jb in jobs:
+            next_op = jb.next_op()
+            co = next_op.prts[ma.id] * (jb.due - env.sim_time)
+            if co < minimum_co and ma.id in next_op.eligible_machine:
+                job_index = jb.id
+                machine_index = ma.id
+                minimum_co = co
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
+
+def apply_atcs_rule(env, jobs, machines):
+    job_index = 0
+    machine_index = 0
+    maximum_priority = -math.inf
+    for ma in machines:
+        for jb in jobs:
+            next_op = jb.next_op()
+            priority = ((-jb.due + next_op.prts[ma.id] - env.if_setup(jb, ma)) * 2 + 4 * (-env.if_transfer(env.resource_info[jb.required_resource], ma))) / next_op.prts[ma.id]
+            if priority > maximum_priority and ma.id in next_op.eligible_machine:
+                job_index = jb.id
+                machine_index = ma.id
+                maximum_priority = priority
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
+
+def apply_gp(env, jobs, machines, method):
+    job_index = 0
+    machine_index = 0
+    maximum_priority = -math.inf
+    for ma in machines:
+        for jb in jobs:
+            next_op = jb.next_op()
+            for eli_ma in next_op.eligible_machine:
+                if eli_ma == ma.id:
+                    value_dict = dict()
+                    value_dict['machine_available_time'] = ma.available_time
+                    value_dict['job_prts_at_machine'] = next_op.prts[ma.id]
+                    value_dict['job_due'] = jb.due
+                    value_dict['is_there_setup'] = env.if_setup(jb, ma)
+                    value_dict['is_there_transfer'] = env.if_transfer(env.resource_info[jb.required_resource], ma)
+                    value_dict['slack'] = jb.due - next_op.prts[ma.id]
+                    value_dict['is_there_resource_setup'] = env.if_resource_setup(jb, ma)
+                    priority = tc.translate_to_priority(method, value_dict) 
+                    if priority > maximum_priority:
+                        job_index = jb.id
+                        machine_index = ma.id
+                        maximum_priority = priority
+    selected_job = env.job_info[job_index]
+    selected_machine = env.machine_info[machine_index]
+    selected_machine.processing_job = selected_job
+    return selected_job, selected_machine, env.resource_info[selected_job.required_resource]
 
 def run_the_simulator_last(problem, rule):
     data = problem
@@ -477,7 +513,18 @@ def run_the_simulator(problem, rule):
           sim.move_to_next_sim_t(1)
     return sim.total_tardiness
 
+def is_unbalanced(machines):
+    loads = [machine.available_time for machine in machines]
+    return max(loads) - min(loads) > (sum(loads) / len(loads)) * 0.2
 
+def apply_custom_rule(env, jobs, machines):
+    if is_unbalanced(machines):
+        return apply_spt_rule(env, jobs, machines)
+    else:
+        return apply_edd_rule(env, jobs, machines)
+
+
+"""
 problem_path = './data_train/3x12x5/3x12x5_77.pickle'
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
@@ -485,3 +532,5 @@ with open(problem_path, 'rb') as fr:
 
 run_the_simulator_last(problem, 'SPT')
 #run_the_simulator(problem, 'SPT')
+"""
+
