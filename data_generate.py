@@ -158,9 +158,11 @@ if __name__ == '__main__':
 
     make_train_data_dict(env_params, num_prob=200, base_dir=base_dir)
 
-
+"""
 # 데이터 불러오기 예시
 problem_path = './data_train/3x12x5/3x12x5_77.pickle'
+
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
+"""
