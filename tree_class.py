@@ -33,7 +33,7 @@ def random_making_tree(terminal_node_list, function_node_list, min_depth, max_de
         right_node = random_making_tree(t, f, min_depth, max_depth, now_depth+1, node)
         node.left = left_node
         node.right = right_node
-    elif node.value == 'neg' or node.value == 'is_positive':
+    elif node.value in ['neg', 'is_positive', 'is_Photo']:
         child_node = random_making_tree(t, f, min_depth, max_depth, now_depth+1, node)
         node.left = child_node
     else:
@@ -52,6 +52,11 @@ def translate_to_priority(node, value_dict):
         return -translate_to_priority(node.left, value_dict)
     elif node.value == 'is_positive':
         return max(translate_to_priority(node.left, value_dict), 0)
+    elif node.value == 'is_Photo':
+        if value_dict['Photo_indicator'] == 0:
+            return 0
+        else:
+            return translate_to_priority(node.left, value_dict)
     elif node.value ==None:
         pass
     else:

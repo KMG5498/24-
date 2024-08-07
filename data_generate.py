@@ -111,6 +111,10 @@ def generate_data_dict(env_params):
     transfer_time = generate_symmetric_matrix(env_params['n_m'], env_params['min_transfer'], env_params['max_transfer'])
     # 리소스 설치는 고정
 
+    location_of_resource = []
+    for _ in range(env_params['num_resource_type']):
+        location_of_resource.append(random.randint(int(env_params['n_m']/3*2), env_params['n_m']-1))
+
     random_generate_data = {
         'job_type': job_type,
         'job_type_list': job_type_list,
@@ -122,6 +126,7 @@ def generate_data_dict(env_params):
         'transfer_time': transfer_time,
         'job_change_time' : job_change_time,
         'job_transfer_time': job_transfer_time,
+        'location_of_resource': location_of_resource,
         'n_j': env_params['n_j'],
         'n_m': env_params['n_m'],
         'num_families': env_params['num_families'],
@@ -146,8 +151,8 @@ if __name__ == '__main__':
         'num_resource_type': 5,
         'min_transfer': 20,
         'max_transfer': 50,
-        'T' : 0.2,
-        'R': 0.2,
+        'T' : 1,
+        'R': 1,
         'operation_type' : ['A', 'B'],
         'important_operation': 'Photo',
         'max_job_length': 5,
@@ -161,10 +166,11 @@ if __name__ == '__main__':
     make_train_data_dict(env_params, num_prob=200, base_dir=base_dir)
 
 
+"""
 # 데이터 불러오기 예시
 problem_path = './data_train/9x12x5/9x12x5_77.pickle'
 
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
-
+"""
