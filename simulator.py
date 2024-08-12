@@ -1,4 +1,4 @@
-# @title 시뮬레이터 수정중  (GP 적용)
+# -*- coding: utf-8 -*-
 import math
 #import dataloader
 import random
@@ -225,12 +225,12 @@ class Simulator:
             return True
         return False
 
-    def plot_gantt_chart(self):
+    def plot_gantt_chart(self, rule):
         """
         Gantt Chart를 출력하는 함수
         """
         parent_colors = {}
-        palette = sns.color_palette("turbo", self.num_job + 5) 
+        palette = sns.color_palette("viridis", self.num_job + 5) 
         random.shuffle(palette)
 
         fig, ax = plt.subplots(figsize=(15, 6))
@@ -253,7 +253,8 @@ class Simulator:
                         edgecolor='black', align='center', alpha=0.8)
 
                 ax.text(start_time + (end_time - start_time) / 2, machine_id,
-                        f'{job_id.id + str(job_id.parent)}', color='black', ha='center', va='center', fontsize=8)
+                        '{}{}'.format(job_id.id, job_id.parent), color='black', ha='center', va='center', fontsize=8)
+
 
         for parent in parent_colors:
             parent_jobs = [(machine_id, job) for machine_id, jobs in self.schedule.items() for job in jobs if job[0].parent == parent]
@@ -272,6 +273,11 @@ class Simulator:
         ax.set_title('Schedule')
 
         ax.invert_yaxis()
+        if rule in ['GP', 'SPT', 'M-SPT', 'EDD', 'M-EDD', 'ATCS', 'M-ATCS']:
+            plt.savefig(str(rule)+'_'+'gantt_chart.png')
+        else:
+            plt.savefig('GP_gantt_chart.png')
+
 
         plt.show()
 
@@ -465,12 +471,12 @@ def run_the_simulator_last(problem, rule):
 
     # 결과 출력 부분
     for i in range(sim.num_machine):
-        print(f"machine {i}:", end=" ")
+        print("machine {}:".format(i), end=" ")
         for j in sim.schedule[i]:
             print(j[0].id, end=" ")
         print()
     print(sim.total_tardiness)
-    sim.plot_gantt_chart()
+    sim.plot_gantt_chart(rule)
 
 def run_the_simulator(problem, rule):
     data = problem
@@ -488,14 +494,19 @@ def run_the_simulator(problem, rule):
     return sim.total_tardiness
 
 """
-problem_path = './data_train/9x12x5/9x12x5_77.pickle'
+import matplotlib
+matplotlib.use('Agg')  # Agg 백엔드 설정
+problem_path = './data_train/9x30x5/9x30x5_77.pickle'
 with open(problem_path, 'rb') as fr:
     problem = pickle.load(fr)
     print(problem)
 
 run_the_simulator_last(problem, 'SPT')
+
 #run_the_simulator(problem, 'SPT')
+
 """
+
 
 
 

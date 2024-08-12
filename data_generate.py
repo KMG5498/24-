@@ -29,10 +29,10 @@ def make_train_data_dict(env_params, num_prob, base_dir):
     np.random.seed(1)
     for path in range(num_prob):
         problems_dict = generate_data_dict(env_params)
-        dir_path = os.path.join(base_dir, "data_train", f"{params['n_m']}x{params['n_j']}x{params['num_families']}")
+        dir_path = os.path.join(base_dir, "data_train", "{}x{}x{}".format(params['n_m'], params['n_j'], params['num_families']))
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        file_path = os.path.join(dir_path, f"{params['n_m']}x{params['n_j']}x{params['num_families']}_{path}.pickle")
+        file_path = os.path.join(dir_path, "{}x{}x{}_{}.pickle".format(params['n_m'], params['n_j'], params['num_families'], path))
         with open(file_path, 'wb') as f:
             pickle.dump(problems_dict, f, pickle.HIGHEST_PROTOCOL)
 
@@ -45,7 +45,7 @@ def make_eval_data_dict(env_params, num_prob, base_dir):
         dir_path = os.path.join(base_dir, "data_eval")
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        file_path = os.path.join(dir_path, f"{params['n_m']}x{params['n_j']}x{params['num_families']}_{path}.pickle")
+        file_path = os.path.join(dir_path, "{}x{}x{}_{}.pickle".format(params['n_m'], params['n_j'], params['num_families'], path))
         with open(file_path, 'wb') as f:
             pickle.dump(problems_dict, f, pickle.HIGHEST_PROTOCOL)
 
@@ -141,7 +141,7 @@ def generate_data_dict(env_params):
 if __name__ == '__main__':
     # parameters
     env_params = {
-        'n_j': 12,
+        'n_j': 30,
         'n_m': 9,
         'prts_low': 10,
         'prts_high': 30,
@@ -151,8 +151,8 @@ if __name__ == '__main__':
         'num_resource_type': 5,
         'min_transfer': 20,
         'max_transfer': 50,
-        'T' : 1,
-        'R': 1,
+        'T' : 0.2,
+        'R': 0.2,
         'operation_type' : ['A', 'B'],
         'important_operation': 'Photo',
         'max_job_length': 5,
